@@ -17,29 +17,29 @@ function getLastLinesPromisified(filename, lines) {
     var fNameStat = fs.statSync(fName);
     var startOffset = fNameStat.size
     var endOffset = startOffset
-    var finalStartPosition = fNameStat.size
     fs.open(fName, 'r', (err, fd) => {
       if(err) reject(err)
+      var completeData = ''
       while(true){
         startOffset = Math.max(0, startOffset - 1024)
         var dataLength = endOffset - startOffset
         var buffer = new Buffer(dataLength);
         fs.readSync(fd, buffer, 0, dataLength, startOffset)
         var text = buffer.toString()
+        var completed = false
         for(var i=text.length-1; i>=0; i--){
           if(text[i]=='\n') lines--
-          if(lines==0) break;
-          finalStartPosition--
+          if(lines==0){
+            completeData = text.substr(i+1) + completeData
+            completed = true
+            break;
+          }
         }
+        if(!completed) completeData = text + completeData
         endOffset = startOffset
         if(lines==0 || endOffset == 0) break
       }
-      var buffer = new Buffer(fNameStat.size - finalStartPosition);
-      
-      fs.read(fd, buffer, 0, fNameStat.size - finalStartPosition, finalStartPosition, function (err, bytesRead, completeData) {
-        if (err) reject(err)
-        resolve(completeData.toString())
-      })
+      resolve(completeData)
     });
   });
 }
